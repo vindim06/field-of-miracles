@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Игра - Поле Чудес</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Анимированный градиентный фон */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 25%, #0f3460 50%, #16213e 75%, #1a1a2e 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            z-index: -2;
+        }
+
+        /* Плавающие частицы */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image:
+                radial-gradient(circle at 20% 50%, rgba(255,255,255,0.05) 2px, transparent 2px),
+                radial-gradient(circle at 80% 80%, rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 50px 50px, 30px 30px;
+            pointer-events: none;
+            z-index: -1;
+            animation: floatParticles 20s linear infinite;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes floatParticles {
+            0% { transform: translateY(0px); }
+            100% { transform: translateY(-100px); }
+        }
+
+        @keyframes glow {
+            0% { box-shadow: 0 0 5px rgba(102, 126, 234, 0.5); }
+            50% { box-shadow: 0 0 30px rgba(102, 126, 234, 0.8); }
+            100% { box-shadow: 0 0 5px rgba(102, 126, 234, 0.5); }
+        }
+
+        @keyframes glowGold {
+            0% { box-shadow: 0 0 5px rgba(255, 215, 0, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(255, 215, 0, 0.9); }
+            100% { box-shadow: 0 0 5px rgba(255, 215, 0, 0.5); }
+        }
+
+        @keyframes spinWheel {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(720deg); }
+        }
+
+        @keyframes letterReveal {
+            0% { transform: scale(0.5); opacity: 0; letter-spacing: 20px; }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; letter-spacing: 15px; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .game-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            animation: fadeInUp 0.6s ease-out;
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+        }
+
+        .game-header {
+            grid-column: 1 / -1;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .game-header h1 {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 20px rgba(255,215,0,0.3);
+        }
+
+        .room-code {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        .game-area {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .question-box {
+            background: linear-gradient(135deg, rgba(102,126,234,0.9), rgba(118,75,162,0.9));
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            text-align: center;
+            animation: glow 3s ease-in-out infinite;
+        }
+
+        .word-display {
+            font-size: 48px;
+            letter-spacing: 15px;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            margin: 30px 0;
+            background: rgba(0,0,0,0.5);
+            padding: 20px;
+            border-radius: 15px;
+            color: #ffd700;
+            text-shadow: 0 0 10px rgba(255,215,0,0.5);
+            transition: all 0.3s ease;
+        }
+
+        .word-display span {
+            display: inline-block;
+            animation: letterReveal 0.4s ease-out;
+        }
+
+        .game-controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .game-controls button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .game-controls button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .game-controls button:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .game-controls button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .turn-info {
+            text-align: center;
+            padding: 15px;
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            border-radius: 10px;
+            margin: 20px 0;
+            font-size: 18px;
+            font-weight: bold;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .players-panel {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            height: fit-content;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .players-panel h3 {
+            margin-bottom: 15px;
+            color: #ffd700;
+        }
+
+        .player-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .player-item.current-turn {
+            background: linear-gradient(135deg, rgba(255,215,0,0.3), rgba(255,237,78,0.1));
+            transform: scale(1.02);
+            animation: glowGold 1.5s ease-in-out infinite;
+            border: 1px solid rgba(255,215,0,0.5);
+        }
+
+        .player-avatar-small {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+            transition: transform 0.3s ease;
+        }
+
+        .player-item:hover .player-avatar-small {
+            transform: rotate(10deg) scale(1.1);
+        }
+
+        .player-info {
+            flex: 1;
+        }
+
+        .player-name {
+            font-weight: bold;
+            color: white;
+        }
+
+        .player-score {
+            color: #ffd700;
+            font-size: 14px;
+        }
+
+        .host-badge {
+            background: #ff6b6b;
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 5px;
+        }
+
+        .leader-badge {
+            background: #ffc107;
+            color: #333;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 5px;
+        }
+
+        .game-log {
+            background: rgba(0,0,0,0.8);
+            color: #0f0;
+            font-family: monospace;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            height: 150px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+
+        .game-log div {
+            animation: fadeInUp 0.3s ease-out;
+        }
+
+        .host-panel {
+            background: rgba(0,0,0,0.5);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .host-panel input, .host-panel textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            font-size: 16px;
+            background: rgba(255,255,255,0.9);
+        }
+
+        .points-display {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            margin: 10px 0;
+            animation: pulse 0.5s ease-out;
+        }
+
+        .wheel-result {
+            animation: spinWheel 0.5s ease-out;
+        }
+
+        .special-effect {
+            position: fixed;
+            pointer-events: none;
+            font-size: 50px;
+            animation: fadeOutUp 1s ease-out;
+            z-index: 1000;
+        }
+
+        @keyframes fadeOutUp {
+            0% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-100px);
+            }
+        }
+
+        /* Чат */
+        .chat-panel {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.2);
+            height: fit-content;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px 20px;
+            font-weight: bold;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            height: 400px;
+        }
+
+        .message {
+            background: rgba(0,0,0,0.5);
+            border-radius: 10px;
+            padding: 8px 12px;
+            max-width: 90%;
+            animation: slideInRight 0.3s ease-out;
+        }
+
+        .message.system {
+            background: rgba(255,193,7,0.3);
+            text-align: center;
+            font-style: italic;
+        }
+
+        .message-header {
+            font-size: 11px;
+            color: #ffd700;
+            margin-bottom: 3px;
+        }
+
+        .message-text {
+            word-break: break-word;
+            color: white;
+            font-size: 13px;
+        }
+
+        .chat-input-area {
+            padding: 15px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input-area input {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            outline: none;
+        }
+
+        .chat-input-area input:focus {
+            border-color: #ffd700;
+        }
+
+        .chat-input-area button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            padding: 10px 20px;
+            margin: 0;
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Адаптивность */
+        @media (max-width: 968px) {
+            .game-container {
+                grid-template-columns: 1fr;
+            }
+            .word-display {
+                font-size: 28px;
+                letter-spacing: 8px;
+            }
+            .game-controls button {
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+        }
+
+        .game-log::-webkit-scrollbar, .chat-messages::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .game-log::-webkit-scrollbar-track, .chat-messages::-webkit-scrollbar-track {
+            background: #333;
+            border-radius: 10px;
+        }
+
+        .game-log::-webkit-scrollbar-thumb, .chat-messages::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 10px;
+        }
+
+        .observer-badge {
+            background: #17a2b8;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <h1>🎡 Поле Чудес</h1>
+            <div class="room-code">Комната: {{ room_id }}</div>
+        </div>
+
+        <div class="game-area">
+            <!-- Панель ведущего (только для загадывания слова) -->
+            <div id="leaderSetupArea" style="display: none;">
+                <div class="host-panel">
+                    <h3>👑 Вы ведущий! Загадайте слово:</h3>
+                    <input type="text" id="wordInput" placeholder="Введите слово" autocomplete="off">
+                    <textarea id="questionInput" rows="3" placeholder="Введите вопрос для игроков"></textarea>
+                    <button id="submitWordBtn" style="width: 100%;">✅ Начать раунд</button>
+                </div>
+            </div>
+
+            <!-- Режим наблюдателя для ведущего (после загадывания слова) -->
+            <div id="observerArea" style="display: none;">
+                <div class="observer-badge">
+                    👁️ Вы ведущий - наблюдаете за игрой
+                </div>
+            </div>
+
+            <!-- Игровая область для всех -->
+            <div id="gamePlayArea">
+                <div class="question-box" id="questionBox">
+                    Ожидание начала раунда...
+                </div>
+
+                <div class="points-display" id="pointsDisplay"></div>
+
+                <div class="word-display" id="wordDisplay">_____</div>
+
+                <div class="game-controls" id="gameControls">
+                    <button id="spinBtn">🎲 Крутить барабан</button>
+                    <button id="guessLetterBtn">🔤 Назвать букву</button>
+                    <button id="guessWordBtn">💬 Назвать слово целиком</button>
+                </div>
+
+                <div class="turn-info" id="turnInfo">
+                    Загрузка...
+                </div>
+            </div>
+
+            <div class="game-log" id="gameLog">
+                <div>🎮 Добро пожаловать в игру "Поле Чудес"!</div>
+            </div>
+        </div>
+
+        <!-- Чат -->
+        <div class="chat-panel">
+            <div class="chat-header">
+                💬 Чат игры
+            </div>
+            <div class="chat-messages" id="chatMessages">
+                <div class="message system">Подключение к чату...</div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="messageInput" placeholder="Введите сообщение..." onkeypress="handleChatKeyPress(event)">
+                <button onclick="sendChatMessage()">📨 Отправить</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+        const roomId = '{{ room_id }}';
+        const myUsername = '{{ username }}';
+        let myRole = null; // 'leader', 'player', 'observer'
+        let gameStarted = false;
+
+        // Чат функции
+        function addChatMessage(username, message, time, isSystem = false) {
+            const container = document.getElementById('chatMessages');
+            const div = document.createElement('div');
+            div.className = 'message ' + (isSystem ? 'system' : '');
+
+            if (isSystem) {
+                div.innerHTML = `<div class="message-text">${message}</div>`;
+            } else {
+                div.innerHTML = `
+                    <div class="message-header">${username} • ${time}</div>
+                    <div class="message-text">${escapeHtml(message)}</div>
+                `;
+            }
+            container.appendChild(div);
+            div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function sendChatMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            if (message) {
+                socket.emit('send_message', {room_id: roomId, message: message});
+                input.value = '';
+                input.focus();
+            }
+        }
+
+        function handleChatKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendChatMessage();
+            }
+        }
+
+        // Функция для создания плавающего эффекта
+        function createSpecialEffect(text, color, x, y) {
+            const effect = document.createElement('div');
+            effect.className = 'special-effect';
+            effect.textContent = text;
+            effect.style.color = color;
+            effect.style.left = (x || window.innerWidth / 2) + 'px';
+            effect.style.top = (y || window.innerHeight / 2) + 'px';
+            effect.style.fontSize = '40px';
+            effect.style.fontWeight = 'bold';
+            effect.style.textShadow = '0 0 10px rgba(0,0,0,0.5)';
+            document.body.appendChild(effect);
+
+            setTimeout(() => {
+                effect.remove();
+            }, 1000);
+        }
+
+        function addLog(msg, type = 'info') {
+            const log = document.getElementById('gameLog');
+            const entry = document.createElement('div');
+            const time = new Date().toLocaleTimeString();
+            const colors = { info: '#0f0', error: '#ff6b6b', success: '#ffd700' };
+            entry.style.color = colors[type] || colors.info;
+            entry.innerHTML = `[${time}] ${msg}`;
+            log.appendChild(entry);
+            entry.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        socket.on('connect', () => {
+            addLog('✅ Подключено к серверу');
+            socket.emit('join_game', { room_id: roomId });
+        });
+
+        socket.on('game_state', (data) => {
+            gameStarted = true;
+
+            if (data.leader === myUsername) {
+                // Если ведущий еще не загадал слово, показываем панель загадывания
+                if (!data.word_set) {
+                    myRole = 'leader_setup';
+                    document.getElementById('leaderSetupArea').style.display = 'block';
+                    document.getElementById('observerArea').style.display = 'none';
+                    document.getElementById('gamePlayArea').style.display = 'none';
+                    addLog('👑 Вы ведущий! Загадайте слово.');
+                } else {
+                    // Ведущий уже загадал слово - переходим в режим наблюдателя
+                    myRole = 'observer';
+                    document.getElementById('leaderSetupArea').style.display = 'none';
+                    document.getElementById('observerArea').style.display = 'block';
+                    document.getElementById('gamePlayArea').style.display = 'block';
+                    document.getElementById('gameControls').style.display = 'none';
+                    addLog('👑 Вы ведущий (режим наблюдателя). Следите за игрой!');
+                }
+            } else {
+                myRole = 'player';
+                document.getElementById('leaderSetupArea').style.display = 'none';
+                document.getElementById('observerArea').style.display = 'none';
+                document.getElementById('gamePlayArea').style.display = 'block';
+                document.getElementById('gameControls').style.display = 'block';
+                addLog(`🎲 Вы игрок. Очередь: ${data.turn_order.join(' → ')}`);
+            }
+
+            updatePlayersList(data.players, data.leader, data.current_player);
+            updateTurnInfo(data.current_player);
+        });
+
+        socket.on('word_set_confirmation', (data) => {
+            if (myRole === 'leader_setup') {
+                // Ведущий загадал слово - переключаем в режим наблюдателя
+                myRole = 'observer';
+                document.getElementById('leaderSetupArea').style.display = 'none';
+                document.getElementById('observerArea').style.display = 'block';
+                document.getElementById('gamePlayArea').style.display = 'block';
+                document.getElementById('gameControls').style.display = 'none';
+                addLog('👑 Слово загадано! Теперь вы наблюдаете за игрой.');
+                createSpecialEffect('📖 ИГРА НАЧАЛАСЬ!', '#ffd700');
+            }
+        });
+
+        socket.on('round_started', (data) => {
+            document.getElementById('questionBox').innerHTML = `<strong>❓ Вопрос:</strong> ${data.question}`;
+            updateWordDisplay(data.display_word);
+            addLog(`📖 ${data.question}`);
+            addLog(`🔤 Слово состоит из ${data.word_length} букв`);
+            createSpecialEffect('🎯 НОВЫЙ РАУНД!', '#ffd700');
+        });
+
+        socket.on('wheel_result', (data) => {
+            const pointsDiv = document.getElementById('pointsDisplay');
+            pointsDiv.innerHTML = `🎲 Выпал сектор: ${data.sector}! ${data.points > 0 ? `+${data.points} очков!` : ''}`;
+            pointsDiv.classList.add('wheel-result');
+            setTimeout(() => pointsDiv.classList.remove('wheel-result'), 500);
+
+            addLog(`🎲 ${data.player} выиграл ${data.points > 0 ? data.points + ' очков' : data.sector} (сектор: ${data.sector})`);
+
+            if (data.message) {
+                addLog(data.message, data.type === 'bankrupt' ? 'error' : 'success');
+            }
+
+            if (data.type === 'bankrupt') {
+                createSpecialEffect('💸 БАНКРОТ! 💸', '#ff4444');
+            } else if (data.type === 'prize') {
+                createSpecialEffect('🎁 ПРИЗ! 🎁', '#ffd700');
+            } else if (data.type === 'plus') {
+                createSpecialEffect('✨ СЕКТОР + ✨', '#00ff00');
+            }
+
+            if (data.player === myUsername && data.points > 0 && myRole === 'player') {
+                addLog(`💰 У вас ${data.points} очков в этом раунде!`, 'success');
+                createSpecialEffect(`+${data.points}!`, '#ffd700');
+            }
+        });
+
+        socket.on('letter_guessed', (data) => {
+            updateWordDisplay(data.display_word);
+            updatePlayerScore(data.player, data.total_score);
+            addLog(`✅ ${data.player} угадал букву "${data.letter}"! +${data.points_earned} очков`, 'success');
+
+            if (data.player === myUsername && myRole === 'player') {
+                addLog(`🏆 Ваш счет: ${data.total_score}`, 'success');
+                createSpecialEffect(`🔤 ${data.letter}! +${data.points_earned}`, '#00ff00');
+            }
+
+            updateTurnInfo(data.player);
+        });
+
+        socket.on('letter_missed', (data) => {
+            addLog(`❌ ${data.player} ошибся: ${data.message}`, 'error');
+            addLog(`🔄 Ход переходит к ${data.next_player}`, 'info');
+            updateTurnInfo(data.next_player);
+            if (data.player === myUsername && myRole === 'player') {
+                createSpecialEffect('❌ НЕ УГАДАЛ!', '#ff4444');
+            }
+        });
+
+        socket.on('word_missed', (data) => {
+            addLog(`❌ ${data.player} не угадал слово "${data.guessed_word}"`, 'error');
+            addLog(`🔄 Ход переходит к ${data.next_player}`, 'info');
+            updateTurnInfo(data.next_player);
+            if (data.player === myUsername && myRole === 'player') {
+                createSpecialEffect('❌ НЕ УГАДАЛ!', '#ff4444');
+            }
+        });
+
+        socket.on('game_over', (data) => {
+            let message = `🏆 ИГРА ОКОНЧЕНА!\n`;
+            message += `Победитель: ${data.winner}\n`;
+            message += `Загаданное слово: "${data.word}"\n\n`;
+            message += `Результаты:\n`;
+            for (let [name, score] of Object.entries(data.scores)) {
+                message += `${name}: ${score} очков\n`;
+            }
+            alert(message);
+            addLog(`🏆 ПОБЕДИТЕЛЬ: ${data.winner}!`, 'success');
+            addLog(`📖 Слово: ${data.word}`);
+            for (let [name, score] of Object.entries(data.scores)) {
+                addLog(`${name}: ${score} очков`);
+            }
+
+            createSpecialEffect(`🏆 ПОБЕДИТЕЛЬ: ${data.winner}! 🏆`, '#ffd700');
+
+            setTimeout(() => {
+                if (confirm('Хотите сыграть еще раз?')) {
+                    window.location.href = '/lobby';
+                }
+            }, 2000);
+        });
+
+        socket.on('new_message', (data) => {
+            addChatMessage(data.username, data.message, data.time);
+        });
+
+        socket.on('error', (data) => {
+            addLog(`❌ ${data.message}`, 'error');
+            alert('Ошибка: ' + data.message);
+        });
+
+        socket.on('prize_used', (data) => {
+            addLog(data.message, 'success');
+            createSpecialEffect('🎁 БЕСПЛАТНАЯ БУКВА! 🎁', '#ffd700');
+        });
+
+        function updatePlayersList(players, leader, currentPlayer) {
+            const container = document.getElementById('playersList');
+            if (!container) return;
+
+            container.innerHTML = players.map(p => `
+                <div class="player-item ${p.name === currentPlayer ? 'current-turn' : ''}">
+                    <img src="/static/avatars/${p.avatar}" class="player-avatar-small" onerror="this.src='https://via.placeholder.com/40'">
+                    <div class="player-info">
+                        <div class="player-name">
+                            ${p.name}
+                            ${p.name === leader ? '<span class="leader-badge">👑 Ведущий</span>' : ''}
+                            ${p.name === myUsername ? ' (Вы)' : ''}
+                        </div>
+                        <div class="player-score">💰 ${p.score} очков</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updatePlayerScore(playerName, score) {
+            // Обновление будет при следующем обновлении от сервера
+        }
+
+        function updateWordDisplay(word) {
+            const displayDiv = document.getElementById('wordDisplay');
+            if (displayDiv) {
+                const letters = word.split('');
+                displayDiv.innerHTML = letters.map(l => `<span>${l === '_' ? ' _ ' : l}</span>`).join('');
+            }
+        }
+
+        function updateTurnInfo(player) {
+            const turnDiv = document.getElementById('turnInfo');
+            if (turnDiv && myRole === 'player') {
+                if (player === myUsername) {
+                    turnDiv.innerHTML = `🎯 СЕЙЧАС ВАШ ХОД! 🎯<br>Крутите барабан и называйте буквы!`;
+                    turnDiv.style.background = 'linear-gradient(135deg, #4caf50, #45a049)';
+                } else {
+                    turnDiv.innerHTML = `🎯 Сейчас ходит: ${player}`;
+                    turnDiv.style.background = 'linear-gradient(135deg, #ffd700, #ffed4e)';
+                }
+            } else if (turnDiv && myRole === 'observer') {
+                turnDiv.innerHTML = `🎯 Сейчас ходит: ${player} (вы наблюдаете)`;
+                turnDiv.style.background = 'linear-gradient(135deg, #17a2b8, #138496)';
+            }
+        }
+
+        // Обработчики для ведущего (загадывание слова)
+        document.getElementById('submitWordBtn')?.addEventListener('click', () => {
+            const word = document.getElementById('wordInput').value;
+            const question = document.getElementById('questionInput').value;
+            if (word && question) {
+                addLog(`📝 Загадано слово "${word}" (${word.length} букв)`);
+                socket.emit('set_word_and_question', {
+                    room_id: roomId,
+                    word: word,
+                    question: question
+                });
+                document.getElementById('wordInput').disabled = true;
+                document.getElementById('questionInput').disabled = true;
+                document.getElementById('submitWordBtn').disabled = true;
+                document.getElementById('submitWordBtn').textContent = '⏳ Ожидание...';
+                createSpecialEffect('📖 СЛОВО ЗАГАДАНО!', '#ffd700');
+            } else {
+                alert('Введите и слово, и вопрос!');
+            }
+        });
+
+        // Обработчики для игроков
+        document.getElementById('spinBtn')?.addEventListener('click', () => {
+            if (myRole === 'player') {
+                addLog('🎲 Крутим барабан...');
+                socket.emit('spin_wheel', { room_id: roomId });
+                createSpecialEffect('🎡 КРУТИМ! 🎡', '#ffd700');
+            }
+        });
+
+        document.getElementById('guessLetterBtn')?.addEventListener('click', () => {
+            if (myRole === 'player') {
+                const letter = prompt('Введите букву (русскую):', '').toUpperCase();
+                if (letter && /^[А-ЯЁ]$/i.test(letter)) {
+                    addLog(`🔤 Называем букву "${letter}"`);
+                    socket.emit('guess_letter', { room_id: roomId, letter: letter });
+                } else if (letter) {
+                    alert('Введите одну русскую букву!');
+                }
+            }
+        });
+
+        document.getElementById('guessWordBtn')?.addEventListener('click', () => {
+            if (myRole === 'player') {
+                const word = prompt('Назовите слово целиком:', '').toUpperCase();
+                if (word) {
+                    addLog(`💬 Называем слово "${word}"`);
+                    socket.emit('guess_word', { room_id: roomId, word: word });
+                }
+            }
+        });
+
+        // Загружаем историю чата
+        fetch(`/api/chat_history/${roomId}`)
+            .then(res => res.json())
+            .then(messages => {
+                if (messages.length > 0) {
+                    document.getElementById('chatMessages').innerHTML = '';
+                    messages.forEach(msg => {
+                        addChatMessage(msg.username, msg.message, msg.time);
+                    });
+                }
+            })
+            .catch(err => console.log('Ошибка загрузки истории:', err));
+    </script>
+</body>
+</html>

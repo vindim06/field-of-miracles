@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Комната - Поле Чудес</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        /* Анимированный градиентный фон */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 25%, #0f3460 50%, #16213e 75%, #1a1a2e 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            z-index: -2;
+        }
+
+        /* Плавающие частицы */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image:
+                radial-gradient(circle at 20% 50%, rgba(255,255,255,0.05) 2px, transparent 2px),
+                radial-gradient(circle at 80% 80%, rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 50px 50px, 30px 30px;
+            pointer-events: none;
+            z-index: -1;
+            animation: floatParticles 20s linear infinite;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+            height: calc(100vh - 40px);
+        }
+        .room-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-panel {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .chat-header {
+            background: #667eea;
+            color: white;
+            padding: 15px 20px;
+            font-weight: bold;
+        }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .message {
+            background: #f0f0f0;
+            border-radius: 10px;
+            padding: 8px 12px;
+            max-width: 90%;
+        }
+        .message.system {
+            background: #fff3cd;
+            text-align: center;
+            font-style: italic;
+        }
+        .message-header {
+            font-size: 12px;
+            color: #667eea;
+            margin-bottom: 3px;
+        }
+        .message-text {
+            word-break: break-word;
+        }
+        .chat-input-area {
+            padding: 15px;
+            border-top: 1px solid #ddd;
+            display: flex;
+            gap: 10px;
+        }
+        .chat-input-area input {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            outline: none;
+        }
+        .chat-input-area input:focus {
+            border-color: #667eea;
+        }
+        .chat-input-area button {
+            background: #667eea;
+            padding: 10px 20px;
+            margin: 0;
+        }
+        .room-code {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 20px 0;
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .players-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+            flex: 1;
+            overflow-y: auto;
+            max-height: 400px;
+        }
+        .player-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 15px;
+            text-align: center;
+            position: relative;
+        }
+        .player-card.host {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+        }
+        .player-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin-bottom: 10px;
+        }
+        .player-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .host-badge {
+            display: inline-block;
+            background: #ffc107;
+            color: #333;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 20px;
+            margin-top: 5px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 5px;
+            transition: transform 0.2s;
+        }
+        button:hover { transform: translateY(-2px); }
+        .start-btn { background: #ff6b6b; font-size: 18px; padding: 15px 30px; }
+        .leave-btn { background: #6c757d; }
+        .link-box {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 10px;
+            margin-top: 20px;
+            word-break: break-all;
+            font-size: 14px;
+        }
+        h1 { color: #667eea; }
+        .online-badge {
+            font-size: 12px;
+            color: #28a745;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="room-card">
+            <h1>🎡 Поле Чудес</h1>
+            <p>Комната ожидания</p>
+
+            <div class="room-code">
+                🔑 Код комнаты: <strong id="roomCode">{{ room_id }}</strong>
+                <button onclick="copyCode()" style="margin-left: 10px; padding: 5px 10px; font-size: 12px;">📋 Копировать</button>
+            </div>
+
+            <h3>👥 Игроки в комнате <span id="playersCount" class="online-badge"></span></h3>
+            <div id="playersContainer" class="players-grid">
+                <div style="text-align: center;">Загрузка игроков...</div>
+            </div>
+
+            <div class="button-group" style="text-align: center; margin: 20px 0;">
+                <div id="startButtonDiv" style="display: none;">
+                    <button id="startBtn" class="start-btn" onclick="startGame()">🚀 Начать игру</button>
+                </div>
+                <button id="leaveBtn" class="leave-btn" onclick="leaveRoom()">🚪 Покинуть комнату</button>
+            </div>
+
+            <div class="link-box">
+                🔗 Поделись ссылкой с друзьями:<br>
+                <span id="shareLink">{{ request.url }}</span>
+            </div>
+        </div>
+
+        <div class="chat-panel">
+            <div class="chat-header">
+                💬 Чат комнаты
+            </div>
+            <div class="chat-messages" id="chatMessages">
+                <div class="message system">Подключение к чату...</div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="messageInput" placeholder="Введите сообщение..." onkeypress="handleKeyPress(event)">
+                <button onclick="sendMessage()">📨 Отправить</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+        const roomId = '{{ room_id }}';
+        let isHost = false;
+        let myUserId = {{ session.get('user_id', 0) }};
+
+        // Чат
+        function addChatMessage(username, message, time, isSystem = false) {
+            const container = document.getElementById('chatMessages');
+            const div = document.createElement('div');
+            div.className = 'message ' + (isSystem ? 'system' : '');
+
+            if (isSystem) {
+                div.innerHTML = `<div class="message-text">${message}</div>`;
+            } else {
+                div.innerHTML = `
+                    <div class="message-header">${username} • ${time}</div>
+                    <div class="message-text">${escapeHtml(message)}</div>
+                `;
+            }
+            container.appendChild(div);
+            div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            if (message) {
+                socket.emit('send_message', {room_id: roomId, message: message});
+                input.value = '';
+                input.focus();
+            }
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        // Комната
+        socket.on('connect', () => {
+            console.log('Подключено к серверу');
+            socket.emit('join_room', {room_id: roomId});
+        });
+
+        socket.on('role_assigned', (data) => {
+            isHost = data.is_host;
+            console.log('Роль:', isHost ? 'Хост' : 'Игрок');
+
+            if (isHost) {
+                document.getElementById('startButtonDiv').style.display = 'block';
+                addChatMessage('Система', 'Вы создатель комнаты! Можете начать игру в любой момент.', '', true);
+            } else {
+                document.getElementById('startButtonDiv').style.display = 'none';
+                addChatMessage('Система', 'Ожидайте начала игры от создателя комнаты.', '', true);
+            }
+        });
+
+        socket.on('players_update', (data) => {
+            updatePlayersList(data.players, data.host_id);
+            isHost = (data.host_id === myUserId);
+        });
+
+        socket.on('room_closed', (data) => {
+            addChatMessage('Система', data.message, '', true);
+            setTimeout(() => {
+                window.location.href = '/lobby';
+            }, 2000);
+        });
+
+        socket.on('redirect_to_lobby', () => {
+            window.location.href = '/lobby';
+        });
+
+        socket.on('game_ready', (data) => {
+            addChatMessage('Системa', 'Игра начинается! Перенаправление...', '', true);
+            setTimeout(() => {
+                window.location.href = data.game_url;
+            }, 1000);
+        });
+
+        socket.on('new_message', (data) => {
+            addChatMessage(data.username, data.message, data.time);
+        });
+
+        socket.on('error', (data) => {
+            addChatMessage('Ошибка', data.message, '', true);
+            alert('Ошибка: ' + data.message);
+        });
+
+        function updatePlayersList(players, hostId) {
+            const container = document.getElementById('playersContainer');
+            const countSpan = document.getElementById('playersCount');
+
+            if (!players || players.length === 0) {
+                container.innerHTML = '<div style="text-align: center;">Нет игроков</div>';
+                countSpan.innerText = '(0)';
+                return;
+            }
+
+            countSpan.innerText = `(${players.length})`;
+
+            container.innerHTML = players.map(p => `
+                <div class="player-card ${p.user_id === hostId ? 'host' : ''}">
+                    <img src="/static/avatars/${p.avatar}" class="player-avatar" onerror="this.src='https://via.placeholder.com/60'">
+                    <div class="player-name">${p.username} ${p.user_id === myUserId ? '(Вы)' : ''}</div>
+                    ${p.user_id === hostId ? '<div class="host-badge">👑 Создатель</div>' : ''}
+                </div>
+            `).join('');
+        }
+
+        function startGame() {
+            if (isHost) {
+                if (confirm('Начать игру? Все игроки будут перенаправлены в игру.')) {
+                    const startBtn = document.getElementById('startBtn');
+                    startBtn.disabled = true;
+                    startBtn.textContent = '⏳ Запуск...';
+                    socket.emit('start_game_from_room', {room_id: roomId});
+                    addChatMessage('Система', 'Создатель начал игру!', '', true);
+                }
+            }
+        }
+
+        function leaveRoom() {
+            if (confirm('Вы уверены, что хотите покинуть комнату?')) {
+                socket.emit('leave_room', {room_id: roomId});
+            }
+        }
+
+        function copyCode() {
+            navigator.clipboard.writeText(roomId);
+            alert('Код комнаты скопирован!');
+        }
+
+        // Загружаем историю сообщений при загрузке
+        fetch(`/api/chat_history/${roomId}`)
+            .then(res => res.json())
+            .then(messages => {
+                if (messages.length > 0) {
+                    document.getElementById('chatMessages').innerHTML = '';
+                    messages.forEach(msg => {
+                        addChatMessage(msg.username, msg.message, msg.time);
+                    });
+                }
+            })
+            .catch(err => console.log('Ошибка загрузки истории:', err));
+    </script>
+</body>
+</html>

@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Поле Чудес - Игра</title>
+    <style>
+        body {
+            font-family: Arial;
+            text-align: center;
+            padding: 20px;
+            background: #667eea;
+            color: white;
+        }
+        .game {
+            background: white;
+            color: black;
+            padding: 20px;
+            border-radius: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #5a5ac0;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .word {
+            font-size: 40px;
+            letter-spacing: 10px;
+            font-family: monospace;
+            margin: 20px;
+        }
+        .players {
+            text-align: left;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        .player {
+            padding: 10px;
+            margin: 5px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            display: inline-block;
+            min-width: 100px;
+        }
+        .player-current {
+            background: #4caf50;
+            color: white;
+        }
+        .debug {
+            background: #333;
+            color: #0f0;
+            font-family: monospace;
+            font-size: 12px;
+            padding: 10px;
+            margin-top: 10px;
+            text-align: left;
+            height: 150px;
+            overflow: auto;
+        }
+        input, textarea {
+            width: 80%;
+            padding: 10px;
+            margin: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .score {
+            font-weight: bold;
+            color: #ff9800;
+        }
+        .current-turn-indicator {
+            background: #4caf50;
+            color: white;
+            padding: 5px;
+            border-radius: 5px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game">
+        <h1>🎡 Поле Чудес 🎡</h1>
+        <div id="waitingScreen">
+            <h2>⏳ Ожидание начала игры...</h2>
+            <div id="playersList" class="players"></div>
+            <div id="startBtnDiv" style="display:none;">
+                <button id="startGameBtn">🚀 Начать игру</button>
+            </div>
+            <p id="statusText">Подключение к серверу...</p>
+        </div>
+
+        <div id="gameScreen" style="display:none;">
+            <div id="hostScreen" style="display:none;">
+                <h2>👑 Вы ведущий!</h2>
+                <input type="text" id="wordInput" placeholder="Введите слово" autocomplete="off">
+                <br>
+                <textarea id="questionInput" rows="3" placeholder="Введите вопрос"></textarea>
+                <br>
+                <button id="submitWordBtn">✅ Загадать слово</button>
+            </div>
+
+            <div id="playerScreen" style="display:none;">
+                <div id="questionDisplay" style="background: #667eea; color: white; padding: 15px; border-radius: 10px; margin: 10px;"></div>
+                <div class="word" id="wordDisplay">_____</div>
+                <button id="spinBtn">🎲 Крутить барабан</button>
+                <button id="guessLetterBtn">🔤 Назвать букву</button>
+                <button id="guessWordBtn">💬 Назвать слово</button>
+                <div id="turnDisplay" style="margin-top: 20px; font-size: 18px;"></div>
+            </div>
+        </div>
+
+        <div class="debug" id="log">
+            <div>🟢 Страница загружена, ID лобби: <span id="lobbyIdDisplay"></span></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+        const lobbyId = '{{ lobby_id }}';
+
+        // Показываем ID лобби на странице
+        document.getElementById('lobbyIdDisplay').innerText = lobbyId;
+
+        // Берем имя из localStorage или запрашиваем
+        let playerName = localStorage.getItem('playerName');
+        if (!playerName) {
+            playerName = prompt('Введите ваше имя:', 'Игрок_' + Math.floor(Math.random() * 1000));
+            if (playerName) {
+                localStorage.setItem('playerName', playerName);
+            } else {
+                playerName = 'Гость_' + Math.floor(Math.random() * 1000);
+            }
+        }
+
+        let myRole = null;
+        let currentPoints = 0;
+
+        function addLog(msg) {
+            const log = document.getElementById('log');
+            const div = document.createElement('div');
+            const timestamp = new Date().toLocaleTimeString();
+            div.innerText = timestamp + ' - ' + msg;
+            log.appendChild(div);
+            log.scrollTop = log.scrollHeight;
+            console.log(timestamp, msg);
+        }
+
+        addLog('📡 Подключаюсь к серверу...');
+        addLog(`👤 Имя игрока: ${playerName}`);
+
+        socket.on('connect', () => {
+            addLog('✅ Соединение с сервером установлено!');
+            document.getElementById('statusText').innerText = 'Соединение установлено. Присоединяюсь к лобби...';
+
+            // Присоединяемся к лобби
+            addLog(`🔗 Отправляю запрос на присоединение к лобби ${lobbyId} с именем ${playerName}`);
+            socket.emit('join_lobby', {lobby_id: lobbyId, name: playerName});
+        });
+
+        socket.on('join_success', (data) => {
+            addLog(`✅ Успешно присоединился к лобби ${data.lobby_id}`);
+            addLog(`👥 Игроки в лобби: ${data.players.join(', ')}`);
+            document.getElementById('statusText').innerHTML = `Вы в лобби! Игроков: ${data.players.length}`;
+            updatePlayersList(data.players);
+        });
+
+        socket.on('players_update', (data) => {
+            addLog(`🔄 Обновление списка игроков: ${data.players.join(', ')}`);
+            updatePlayersList(data.players);
+        });
+
+        socket.on('game_started', (data) => {
+            addLog(`🎮 ИГРА НАЧАЛАСЬ! Ведущий: ${data.leader}`);
+            addLog(`📋 Порядок ходов: ${data.turn_order.join(' → ')}`);
+
+            document.getElementById('waitingScreen').style.display = 'none';
+            document.getElementById('gameScreen').style.display = 'block';
+
+            if (data.leader === playerName) {
+                myRole = 'leader';
+                document.getElementById('hostScreen').style.display = 'block';
+                addLog('👑 ВЫ ВЕДУЩИЙ! Загадайте слово.');
+            } else {
+                myRole = 'player';
+                document.getElementById('playerScreen').style.display = 'block';
+                addLog(`🎲 ВЫ ИГРОК. Очередь: ${data.turn_order.join(' → ')}`);
+                updateTurnDisplay(data.current_player);
+            }
+        });
+
+        socket.on('round_started', (data) => {
+            addLog(`📖 Вопрос: ${data.question}`);
+            addLog(`🔤 Слово из ${data.word_length} букв: ${data.display_word}`);
+            document.getElementById('questionDisplay').innerHTML = `<strong>❓ Вопрос:</strong> ${data.question}`;
+            document.getElementById('wordDisplay').innerHTML = data.display_word.split('').join(' ');
+        });
+
+        socket.on('wheel_result', (data) => {
+            currentPoints = data.points;
+            addLog(`🎲 ${data.player} выиграл ${data.points} очков!`);
+            if (data.player === playerName) {
+                addLog(`💰 У вас ${data.points} очков в этом раунде!`);
+            }
+        });
+
+        socket.on('letter_guessed', (data) => {
+            addLog(`✅ ${data.player} угадал букву! +${data.points_earned} очков`);
+            addLog(`📝 Слово: ${data.display_word}`);
+            document.getElementById('wordDisplay').innerHTML = data.display_word.split('').join(' ');
+            if (data.player === playerName) {
+                addLog(`🏆 Ваш счет: ${data.total_score}`);
+            }
+            updatePlayerScore(data.player, data.total_score);
+            updateTurnDisplay(data.player);
+        });
+
+        socket.on('letter_missed', (data) => {
+            addLog(`❌ ${data.player} ошибся: ${data.message}`);
+            addLog(`🔄 Ход переходит к ${data.next_player}`);
+            updateTurnDisplay(data.next_player);
+        });
+
+        socket.on('word_missed', (data) => {
+            addLog(`❌ ${data.player} не угадал слово "${data.guessed_word}"`);
+            addLog(`🔄 Ход переходит к ${data.next_player}`);
+            updateTurnDisplay(data.next_player);
+        });
+
+        socket.on('game_over', (data) => {
+            let msg = `🏆 ИГРА ОКОНЧЕНА! Победитель: ${data.winner}! Слово: "${data.word}"\n`;
+            msg += `Результаты:\n`;
+            for (let [name, score] of Object.entries(data.scores)) {
+                msg += `${name}: ${score} очков\n`;
+            }
+            alert(msg);
+            addLog(msg);
+            addLog('🔄 Перезагрузите страницу для новой игры');
+
+            // Показываем кнопку для перезагрузки
+            setTimeout(() => {
+                if (confirm('Хотите сыграть еще раз?')) {
+                    window.location.href = '/';
+                }
+            }, 2000);
+        });
+
+        socket.on('error', (data) => {
+            addLog(`❌ ОШИБКА: ${data.message}`);
+            alert('Ошибка: ' + data.message);
+        });
+
+        socket.on('connect_error', (error) => {
+            addLog(`❌ Ошибка подключения: ${error.message}`);
+            document.getElementById('statusText').innerHTML = 'Ошибка подключения к серверу!';
+        });
+
+        function updatePlayersList(players) {
+            const container = document.getElementById('playersList');
+            if (container) {
+                if (players.length === 0) {
+                    container.innerHTML = '<p>Нет игроков</p>';
+                } else {
+                    container.innerHTML = '<h3>👥 Игроки в лобби:</h3>' +
+                        players.map(p => `<div class="player" id="player-${p}">${p} ${p === playerName ? '(это вы)' : ''} <span class="score" id="score-${p}"></span></div>`).join('');
+                }
+
+                addLog(`📊 Список обновлен: ${players.length} игрок(ов)`);
+
+                // Показываем кнопку старта, если:
+                // 1. Мы первый игрок (создатель)
+                // 2. Игроков >= 2
+                // 3. Игра еще не началась
+                const isFirstPlayer = players.length > 0 && players[0] === playerName;
+                const canStart = players.length >= 2 && isFirstPlayer;
+
+                addLog(`🔍 Проверка: первый игрок=${isFirstPlayer}, игроков=${players.length}, можем начать=${canStart}`);
+
+                if (canStart) {
+                    document.getElementById('startBtnDiv').style.display = 'block';
+                    document.getElementById('statusText').innerHTML = `✅ Вы создатель! Игроков: ${players.length}. Можно начинать!`;
+                    addLog(`🎮 Кнопка "Начать игру" стала видимой!`);
+                } else if (isFirstPlayer && players.length < 2) {
+                    document.getElementById('statusText').innerHTML = `⏳ Ожидание игроков (сейчас ${players.length}/2+)...`;
+                } else {
+                    document.getElementById('statusText').innerHTML = `⏳ Ожидание начала игры. Игроков: ${players.length}`;
+                }
+            }
+        }
+
+        function updatePlayerScore(playerName, score) {
+            const scoreSpan = document.getElementById(`score-${playerName}`);
+            if (scoreSpan) {
+                scoreSpan.innerText = `💰 ${score}`;
+            }
+        }
+
+        function updateTurnDisplay(currentPlayer) {
+            const turnDiv = document.getElementById('turnDisplay');
+            if (turnDiv) {
+                turnDiv.innerHTML = `<strong>🎯 Сейчас ходит:</strong> ${currentPlayer}`;
+                if (currentPlayer === playerName) {
+                    turnDiv.innerHTML += `<br><span style="color: green; font-weight: bold;">⚡ ВАШ ХОД! Крутите барабан или называйте букву!</span>`;
+                }
+            }
+
+            // Подсвечиваем текущего игрока в списке
+            document.querySelectorAll('.player').forEach(el => {
+                el.classList.remove('player-current');
+                if (el.id === `player-${currentPlayer}`) {
+                    el.classList.add('player-current');
+                }
+            });
+        }
+
+        // Кнопка начала игры
+        const startBtn = document.getElementById('startGameBtn');
+        if (startBtn) {
+            startBtn.addEventListener('click', () => {
+                addLog(`🚀 Отправляю команду на начало игры...`);
+                socket.emit('start_game', {lobby_id: lobbyId});
+                startBtn.disabled = true;
+                startBtn.innerText = '⏳ Запуск...';
+            });
+        }
+
+        // Обработчики для ведущего
+        const submitBtn = document.getElementById('submitWordBtn');
+        if (submitBtn) {
+            submitBtn.addEventListener('click', () => {
+                const word = document.getElementById('wordInput').value;
+                const question = document.getElementById('questionInput').value;
+                if (word && question) {
+                    addLog(`📝 Загадываю слово "${word}" с вопросом "${question}"`);
+                    socket.emit('set_word_and_question', {lobby_id: lobbyId, word: word, question: question});
+                    document.getElementById('wordInput').disabled = true;
+                    document.getElementById('questionInput').disabled = true;
+                    submitBtn.disabled = true;
+                    submitBtn.innerText = '✅ Слово загадано!';
+                } else {
+                    alert('Введите и слово, и вопрос!');
+                }
+            });
+        }
+
+        // Обработчики для игроков
+        const spinBtn = document.getElementById('spinBtn');
+        if (spinBtn) {
+            spinBtn.addEventListener('click', () => {
+                addLog(`🎲 Кручу барабан...`);
+                socket.emit('spin_wheel', {lobby_id: lobbyId});
+            });
+        }
+
+        const guessLetterBtn = document.getElementById('guessLetterBtn');
+        if (guessLetterBtn) {
+            guessLetterBtn.addEventListener('click', () => {
+                const letter = prompt('Введите букву (русскую):', '').toUpperCase();
+                if (letter && /^[А-ЯЁ]$/i.test(letter)) {
+                    addLog(`🔤 Называю букву "${letter}"`);
+                    socket.emit('guess_letter', {lobby_id: lobbyId, letter: letter});
+                } else if (letter) {
+                    alert('Введите одну русскую букву!');
+                }
+            });
+        }
+
+        const guessWordBtn = document.getElementById('guessWordBtn');
+        if (guessWordBtn) {
+            guessWordBtn.addEventListener('click', () => {
+                const word = prompt('Назовите слово целиком:', '').toUpperCase();
+                if (word) {
+                    addLog(`💬 Называю слово "${word}"`);
+                    socket.emit('guess_word', {lobby_id: lobbyId, word: word});
+                }
+            });
+        }
+    </script>
+</body>
+</html>

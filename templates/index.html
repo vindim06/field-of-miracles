@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Поле Чудес</title>
+    <style>
+        body {
+            font-family: Arial;
+            text-align: center;
+            padding: 50px;
+            background: #667eea;
+            color: white;
+        }
+        .menu {
+            background: rgba(255,255,255,0.2);
+            padding: 30px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+        button {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            margin: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #ff5252;
+        }
+        input {
+            padding: 10px;
+            font-size: 16px;
+            margin: 10px;
+            border-radius: 5px;
+            border: none;
+        }
+        .info {
+            margin-top: 20px;
+            padding: 10px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="menu">
+        <h1>🎡 Поле Чудес 🎡</h1>
+
+        <div id="mainMenu">
+            <h2>Ваше имя:</h2>
+            <input type="text" id="playerName" placeholder="Введите имя">
+            <br>
+            <button onclick="createLobby()">🌟 Создать лобби</button>
+            <button onclick="showJoinForm()">🔗 Войти по коду</button>
+        </div>
+
+        <div id="joinForm" style="display:none;">
+            <h2>Код лобби:</h2>
+            <input type="text" id="lobbyCode" placeholder="Введите код">
+            <br>
+            <button onclick="joinLobby()">Присоединиться</button>
+            <button onclick="hideJoinForm()">Назад</button>
+        </div>
+
+        <div id="loadingMessage" style="display:none;" class="info">
+            <h2>🔄 Подключение...</h2>
+            <p id="loadingText">Пожалуйста, подождите</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+        let playerName = null;
+        let createdLobbyId = null;
+
+        socket.on('connect', () => {
+            console.log('✅ Подключено к серверу');
+        });
+
+        socket.on('lobby_created', (data) => {
+            console.log('Лобби создано:', data);
+            createdLobbyId = data.lobby_id;
+            // ВАЖНО: Сохраняем имя в localStorage
+            localStorage.setItem('playerName', playerName);
+            localStorage.setItem('lobbyId', data.lobby_id);
+            // АВТОМАТИЧЕСКИ переходим на страницу лобби
+            window.location.href = '/lobby/' + data.lobby_id;
+        });
+
+        socket.on('join_success', (data) => {
+            console.log('Присоединился к лобби:', data);
+            // Сохраняем данные и переходим
+            localStorage.setItem('playerName', playerName);
+            localStorage.setItem('lobbyId', data.lobby_id);
+            window.location.href = '/lobby/' + data.lobby_id;
+        });
+
+        socket.on('error', (data) => {
+            alert('Ошибка: ' + data.message);
+            document.getElementById('loadingMessage').style.display = 'none';
+            document.getElementById('mainMenu').style.display = 'block';
+        });
+
+        function createLobby() {
+            playerName = document.getElementById('playerName').value;
+            if (!playerName) {
+                alert('Введите имя!');
+                return;
+            }
+            console.log('Создаю лобби для', playerName);
+            document.getElementById('mainMenu').style.display = 'none';
+            document.getElementById('loadingMessage').style.display = 'block';
+            document.getElementById('loadingText').innerText = 'Создание лобби...';
+            socket.emit('create_lobby', {name: playerName});
+        }
+
+        function joinLobby() {
+            playerName = document.getElementById('playerName').value;
+            const lobbyCode = document.getElementById('lobbyCode').value;
+            if (!playerName || !lobbyCode) {
+                alert('Введите имя и код лобби!');
+                return;
+            }
+            console.log('Присоединяюсь к лобби', lobbyCode);
+            document.getElementById('mainMenu').style.display = 'none';
+            document.getElementById('joinForm').style.display = 'none';
+            document.getElementById('loadingMessage').style.display = 'block';
+            document.getElementById('loadingText').innerText = 'Присоединение к лобби...';
+            socket.emit('join_lobby', {lobby_id: lobbyCode, name: playerName});
+        }
+
+        function showJoinForm() {
+            document.getElementById('mainMenu').style.display = 'none';
+            document.getElementById('joinForm').style.display = 'block';
+        }
+
+        function hideJoinForm() {
+            document.getElementById('joinForm').style.display = 'none';
+            document.getElementById('mainMenu').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

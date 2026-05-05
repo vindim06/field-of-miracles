@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Профиль - Поле Чудес</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .profile-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .profile-header {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .avatar-section {
+            text-align: center;
+            flex: 1;
+        }
+
+        .avatar-img {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #667eea;
+            margin-bottom: 15px;
+        }
+
+        .info-section {
+            flex: 2;
+        }
+
+        .info-item {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 18px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .edit-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .edit-btn:hover {
+            background: #5a67d8;
+        }
+
+        .edit-form {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .edit-form input {
+            flex: 1;
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .edit-form button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .save-btn {
+            background: #28a745;
+            color: white;
+        }
+
+        .cancel-btn {
+            background: #6c757d;
+            color: white;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 30px 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            margin-top: 5px;
+            opacity: 0.9;
+        }
+
+        button, .back-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 5px;
+            transition: transform 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        button:hover, .back-btn:hover {
+            transform: translateY(-2px);
+            background: #5a67d8;
+        }
+
+        .upload-form {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+        }
+
+        .file-input {
+            margin: 10px 0;
+        }
+
+        .error-message {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 10px;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+
+        .success-message {
+            background: #c6f6d5;
+            color: #22543d;
+            padding: 10px;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .rating {
+            display: inline-block;
+            background: #ffd700;
+            color: #333;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="profile-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h1>🎯 Профиль игрока</h1>
+                <a href="{{ url_for('lobby_menu') }}" class="back-btn">← Назад в лобби</a>
+            </div>
+
+            <div id="messageArea"></div>
+
+            <div class="profile-header">
+                <div class="avatar-section">
+                    <img src="{{ url_for('static', filename='avatars/' + user.avatar) }}"
+                         alt="Avatar" class="avatar-img"
+                         onerror="this.src='https://via.placeholder.com/200?text=Avatar'">
+
+                    <form method="POST" enctype="multipart/form-data" class="upload-form" id="avatarForm">
+                        <div class="file-input">
+                            <input type="file" name="avatar" accept="image/*" id="avatarInput" style="display: none;">
+                            <button type="button" onclick="document.getElementById('avatarInput').click()">
+                                📸 Загрузить аватарку
+                            </button>
+                        </div>
+                        <button type="submit">💾 Сохранить</button>
+                    </form>
+                    <p style="font-size: 12px; color: #666; margin-top: 10px;">
+                        Поддерживаются: PNG, JPG, GIF (до 5MB)
+                    </p>
+                </div>
+
+                <div class="info-section">
+                    <div class="info-item">
+                        <div class="info-label">🎮 Игровой никнейм</div>
+                        <div class="info-value" id="usernameDisplay">
+                            <span>{{ user.username }}</span>
+                            <button class="edit-btn" onclick="showEditUsername()">✏️ Редактировать</button>
+                        </div>
+                        <div id="editUsernameForm" style="display: none;">
+                            <div class="edit-form">
+                                <input type="text" id="newUsername" value="{{ user.username }}" maxlength="20">
+                                <button class="save-btn" onclick="saveUsername()">Сохранить</button>
+                                <button class="cancel-btn" onclick="cancelEditUsername()">Отмена</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="info-item">
+                        <div class="info-label">📅 Дата регистрации</div>
+                        <div class="info-value">{{ user.created_at[:19] }}</div>
+                    </div>
+
+                    <div class="info-item">
+                        <div class="info-label">🆔 ID игрока</div>
+                        <div class="info-value">#{{ user.id }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <h2 style="margin: 20px 0 10px 0;">📊 Статистика</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">{{ user.total_games }}</div>
+                    <div class="stat-label">Всего игр</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ user.total_wins }}</div>
+                    <div class="stat-label">Побед</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ "%.1f"|format((user.total_wins / user.total_games * 100) if user.total_games > 0 else 0) }}%</div>
+                    <div class="stat-label">Процент побед</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ user.total_score }}</div>
+                    <div class="stat-label">Всего очков</div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="{{ url_for('logout') }}" class="back-btn" style="background: #dc3545;">🚪 Выйти из аккаунта</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Автоматическая отправка формы при выборе файла
+        document.getElementById('avatarInput').addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                document.getElementById('avatarForm').submit();
+            }
+        });
+
+        function showMessage(text, isError = false) {
+            const messageArea = document.getElementById('messageArea');
+            messageArea.innerHTML = `<div class="${isError ? 'error-message' : 'success-message'}">${text}</div>`;
+            setTimeout(() => {
+                messageArea.innerHTML = '';
+            }, 3000);
+        }
+
+        function showEditUsername() {
+            document.getElementById('usernameDisplay').style.display = 'none';
+            document.getElementById('editUsernameForm').style.display = 'block';
+        }
+
+        function cancelEditUsername() {
+            document.getElementById('usernameDisplay').style.display = 'flex';
+            document.getElementById('editUsernameForm').style.display = 'none';
+        }
+
+        async function saveUsername() {
+            const newUsername = document.getElementById('newUsername').value.trim();
+
+            if (newUsername.length < 3) {
+                showMessage('Никнейм должен быть не менее 3 символов', true);
+                return;
+            }
+
+            if (newUsername.length > 20) {
+                showMessage('Никнейм не должен превышать 20 символов', true);
+                return;
+            }
+
+            try {
+                const response = await fetch('/change_username', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({username: newUsername})
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage('Никнейм успешно изменен!');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    showMessage(data.error || 'Ошибка при изменении никнейма', true);
+                }
+            } catch (error) {
+                showMessage('Ошибка сервера', true);
+            }
+        }
+    </script>
+</body>
+</html>

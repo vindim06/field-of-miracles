@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Лобби - Поле Чудес</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        .header {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .welcome { font-size: 18px; }
+        .username { color: #667eea; font-weight: bold; }
+        .profile-link, .logout-btn {
+            background: #48bb78;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .logout-btn { background: #ff6b6b; }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+        }
+        h1 { color: #667eea; margin-bottom: 20px; }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover { transform: translateY(-2px); background: #5a67d8; }
+        .room-input { margin-top: 20px; padding-top: 20px; border-top: 2px solid #eee; }
+        .room-input input {
+            padding: 12px;
+            font-size: 16px;
+            width: 200px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            margin-right: 10px;
+        }
+        .small-btn { background: #48bb78; padding: 12px 20px; font-size: 16px; }
+        .info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e6f7ff;
+            border-radius: 10px;
+            color: #0050b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="welcome">Привет, <span class="username">{{ username }}</span>! 👋</div>
+            <div>
+                <a href="{{ url_for('profile') }}" class="profile-link">👤 Профиль</a>
+                <a href="{{ url_for('logout') }}" class="logout-btn">🚪 Выйти</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <h1>🎡 Поле Чудес</h1>
+            <button onclick="createRoom()">🌟 Создать новую комнату</button>
+
+            <div class="room-input">
+                <h3>Или присоединиться по коду:</h3>
+                <input type="text" id="roomCode" placeholder="Введите код комнаты">
+                <button onclick="joinRoom()" class="small-btn">🔗 Присоединиться</button>
+            </div>
+
+            <div class="info">
+                💡 Подсказка: После создания комнаты, поделись ссылкой с друзьями!
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function createRoom() { window.location.href = '/create_room'; }
+        function joinRoom() {
+            const code = document.getElementById('roomCode').value;
+            if (code) window.location.href = '/room/' + code;
+            else alert('Введите код комнаты!');
+        }
+    </script>
+</body>
+</html>
