@@ -13,6 +13,9 @@ app = Flask(__name__)
 app.secret_key = 'pole-chudes-secret-key-2024-change-this'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
+PORT = int(os.environ.get('PORT', 5000))
+
+
 # Настройки для загрузки аватарок
 UPLOAD_FOLDER = 'static/avatars'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -763,4 +766,4 @@ if __name__ == '__main__':
     print("📍 Локальный адрес: http://localhost:5000")
     print("📍 Для друга: http://[ваш-IP-адрес]:5000")
     print("=" * 50)
-    socketio.run(app, debug=True, host='0.0.0.0', port=5000)
+    socketio.run(app, host='0.0.0.0', port=PORT)
